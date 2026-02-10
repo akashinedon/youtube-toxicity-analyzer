@@ -1,0 +1,10 @@
+# Absolute minimum to get started
+python-dotenv
+pandas
+numpy
+google-api-python-client
+google-auth
+detoxify
+streamlit
+plotly
+tqdm
