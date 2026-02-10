@@ -1,10 +1,11 @@
-# Absolute minimum to get started
 python-dotenv
 pandas
 numpy
 google-api-python-client
 google-auth
+google-auth-oauthlib
 detoxify
-streamlit
+streamlit>=1.28.0
 plotly
 tqdm
+requests

@@ -1,8 +1,10 @@
 """
-Test if all minimal requirements are installed correctly
+Test if all requirements are installed correctly
 """
 
-print("Testing installations...\n")
+print("=" * 50)
+print("Testing Installations")
+print("=" * 50)
 
 # Test 1: Python-dotenv
 try:
@@ -29,7 +31,6 @@ except ImportError as e:
 try:
     from detoxify import Detoxify
     print("✅ detoxify: OK")
-    print("   Note: First run will download model (~400MB)")
 except ImportError as e:
     print(f"❌ detoxify: {e}")
 
@@ -47,5 +48,13 @@ try:
 except ImportError as e:
     print(f"❌ plotly: {e}")
 
-print("\n✅ All minimal requirements are installed!")
-print("Ready to continue with the project!")
+# Test 7: tqdm
+try:
+    from tqdm import tqdm
+    print("✅ tqdm: OK")
+except ImportError as e:
+    print(f"❌ tqdm: {e}")
+
+print("\n" + "=" * 50)
+print("✅ All tests completed!")
+print("=" * 50)
