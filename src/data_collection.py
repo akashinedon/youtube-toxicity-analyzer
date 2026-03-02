@@ -22,16 +22,24 @@ class YouTubeCommentCollector:
     def __init__(self, api_key: Optional[str] = None):
         """
         Initialize the YouTube API client
-        
+
         Args:
-            api_key: YouTube Data API key. If None, loads from .env file
+            api_key: YouTube Data API key. If None, loads from .env or Streamlit secrets
         """
         self.api_key = api_key or os.getenv('YOUTUBE_API_KEY')
-        
+
+        # Fallback: try Streamlit secrets (for Streamlit Cloud deployment)
+        if not self.api_key:
+            try:
+                import streamlit as st
+                self.api_key = st.secrets.get('YOUTUBE_API_KEY')
+            except Exception:
+                pass
+
         if not self.api_key:
             raise ValueError(
                 "YouTube API key not found! "
-                "Please set YOUTUBE_API_KEY in .env file"
+                "Set YOUTUBE_API_KEY in .env file or Streamlit secrets."
             )
         
         # Build YouTube API client
