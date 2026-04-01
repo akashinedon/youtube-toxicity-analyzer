@@ -36,6 +36,14 @@ DARK_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+:root {
+    --bg-0: #080810;
+    --surface: rgba(255,255,255,0.03);
+    --surface-border: rgba(255,255,255,0.07);
+    --text-main: #e8e8f0;
+    --text-muted: rgba(180,180,210,0.55);
+}
+
 /* ── Base reset ─────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -44,8 +52,11 @@ html, body, [class*="css"] {
 }
 
 .stApp {
-    background: #080810;
-    color: #e8e8f0;
+        background:
+            radial-gradient(900px 500px at 85% -10%, rgba(255, 0, 0, 0.12), transparent 70%),
+            radial-gradient(700px 400px at 10% 0%, rgba(55, 65, 81, 0.35), transparent 70%),
+            var(--bg-0);
+        color: var(--text-main);
 }
 
 /* ── Scrollbar ──────────────────────────────────── */
@@ -364,6 +375,62 @@ div[data-testid="stProgressBar"] > div > div {
 .feature-title { font-size: 0.85rem; font-weight: 600; color: #e8e8f0; margin-bottom: 0.2rem; }
 .feature-desc { font-size: 0.75rem; color: rgba(180,180,210,0.5); }
 
+/* Quick start strip */
+.quick-start {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    margin-top: 1.2rem;
+}
+.quick-step {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 12px;
+    padding: 0.9rem;
+}
+.quick-step strong {
+    display: block;
+    color: #fff;
+    font-size: 0.82rem;
+    margin-bottom: 0.2rem;
+}
+.quick-step span {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+/* Insight pills */
+.insight-row {
+    display: flex;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+.insight-pill {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 999px;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.78rem;
+    color: rgba(220,220,240,0.88);
+}
+
+@media (max-width: 1100px) {
+    .metric-row { grid-template-columns: repeat(2, 1fr); }
+    .feature-grid { grid-template-columns: repeat(2, 1fr); }
+    .quick-start { grid-template-columns: 1fr; }
+    .hero-title { font-size: 2.3rem; }
+}
+
+@media (max-width: 760px) {
+    .main .block-container { padding: 1rem 1rem 2rem; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .metric-row { grid-template-columns: 1fr; }
+    .hero-banner { padding: 2rem 1.2rem 1.4rem; border-radius: 14px; }
+    .hero-title { font-size: 1.8rem; }
+    .hero-subtitle { font-size: 0.95rem; }
+}
+
 /* Video info card */
 .video-info-card {
     background: rgba(255,255,255,0.03);
@@ -496,10 +563,25 @@ def render_sidebar():
 
         st.markdown('<div class="sidebar-section-label">Configuration</div>', unsafe_allow_html=True)
 
+        sample_map = {
+            "First YouTube Video Ever": "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+            "Despacito - Music Video": "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+            "Never Gonna Give You Up": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        }
+
         if mode == "Single Video":
+            sample_choice = st.selectbox(
+                "Pick a sample",
+                options=["Custom URL", *sample_map.keys()],
+                help="Choose a sample to auto-fill the URL field."
+            )
+            if sample_choice != "Custom URL":
+                st.session_state['single_video_url'] = sample_map[sample_choice]
+
             video_url = st.text_input(
                 "YouTube URL",
                 placeholder="https://www.youtube.com/watch?v=...",
+                key="single_video_url",
                 label_visibility="collapsed"
             )
             max_comments = st.slider("Comments to analyze", 10, 500, 100, 10)
@@ -593,6 +675,23 @@ def show_welcome_screen():
             <div class="feature-icon">📥</div>
             <div class="feature-title">Export Reports</div>
             <div class="feature-desc">HTML, CSV & JSON formats</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="quick-start">
+        <div class="quick-step">
+            <strong>1. Paste a YouTube URL</strong>
+            <span>Use your own link or pick a sample from the sidebar.</span>
+        </div>
+        <div class="quick-step">
+            <strong>2. Run Analysis</strong>
+            <span>The app scores toxicity and sentiment using AI models.</span>
+        </div>
+        <div class="quick-step">
+            <strong>3. Explore & Export</strong>
+            <span>Inspect tabs, compare videos, then download reports.</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -787,8 +886,36 @@ def display_results():
     # ─── Metric cards ───
     pos_rate = sentiment_stats.get('positive_rate', 0)
     neg_rate = sentiment_stats.get('negative_rate', 0)
+    net_sentiment = pos_rate - neg_rate
     ts_count = int(df['timestamp'].notna().sum())
     total = len(df)
+    score_cols = [
+        'score_toxicity',
+        'score_severe_toxicity',
+        'score_obscene',
+        'score_threat',
+        'score_insult',
+        'score_identity_attack',
+    ]
+    available_score_cols = [c for c in score_cols if c in df.columns]
+    top_category = "unknown"
+    if available_score_cols:
+        top_category = (
+            df[available_score_cols]
+            .mean()
+            .sort_values(ascending=False)
+            .index[0]
+            .replace('score_', '')
+            .replace('_', ' ')
+        )
+
+    st.markdown(f"""
+    <div class="insight-row">
+        <span class="insight-pill">Primary risk: <strong>{top_category.title()}</strong></span>
+        <span class="insight-pill">Net sentiment: <strong>{net_sentiment:+.1f}%</strong></span>
+        <span class="insight-pill">Timestamp references: <strong>{(ts_count / total * 100 if total else 0):.1f}%</strong></span>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown(f"""
     <div class="metric-row">
